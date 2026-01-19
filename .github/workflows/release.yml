@@ -1,0 +1,43 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build app
+        run: |
+          xcodebuild -scheme gander -configuration Release \
+            -archivePath build/gander.xcarchive \
+            -destination 'generic/platform=macOS' \
+            archive
+
+      - name: Export app
+        run: |
+          xcodebuild -exportArchive \
+            -archivePath build/gander.xcarchive \
+            -exportPath build/ \
+            -exportOptionsPlist ExportOptions.plist
+
+      - name: Ad-hoc sign
+        run: codesign --force --deep -s - build/gander.app
+
+      - name: Create DMG
+        run: |
+          hdiutil create -volname "Gander" \
+            -srcfolder build/gander.app \
+            -ov -format UDZO \
+            build/Gander.dmg
+
+      - name: Upload to Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: build/Gander.dmg
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
