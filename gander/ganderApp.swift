@@ -7,12 +7,42 @@
 
 import AppKit
 
+class GanderDocumentController: NSDocumentController {
+    override func openDocument(_ sender: Any?) {
+        // Check if current document is empty and untitled
+        if let currentDoc = currentDocument as? Document,
+           currentDoc.fileURL == nil,
+           currentDoc.text.isEmpty || currentDoc.text == "Hello, world!" {
+            // Use open panel and replace current document
+            let openPanel = NSOpenPanel()
+            openPanel.allowsMultipleSelection = false
+            openPanel.canChooseDirectories = false
+            openPanel.canChooseFiles = true
+
+            openPanel.begin { [weak self] response in
+                if response == .OK, let url = openPanel.url {
+                    // Close the empty document
+                    currentDoc.close()
+                    // Open the selected file
+                    self?.openDocument(withContentsOf: url, display: true) { _, _, _ in }
+                }
+            }
+        } else {
+            // Default behavior
+            super.openDocument(sender)
+        }
+    }
+}
+
 @main
 class AppDelegate: NSObject, NSApplicationDelegate {
+    let documentController = GanderDocumentController()
+
     static func main() {
         let app = NSApplication.shared
         let delegate = AppDelegate()
         app.delegate = delegate
+        _ = delegate.documentController // Initialize our custom controller
         app.run()
     }
 
