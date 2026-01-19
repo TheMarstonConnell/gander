@@ -7,8 +7,22 @@
 
 import SwiftUI
 
+class AppDelegate: NSObject, NSApplicationDelegate {
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
+        // Delay check to allow new document windows to open
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            if NSApp.windows.filter({ $0.isVisible }).isEmpty {
+                NSApp.terminate(nil)
+            }
+        }
+        return false
+    }
+}
+
 @main
 struct ganderApp: App {
+    @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
+
     var body: some Scene {
         DocumentGroup(newDocument: ganderDocument()) { file in
             ContentView(document: file.$document)
