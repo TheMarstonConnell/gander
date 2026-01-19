@@ -141,6 +141,7 @@ struct PaddedTextEditor: NSViewRepresentable {
         let textView = container.textView
 
         textView.isRichText = false
+        textView.allowsUndo = true
         let fontSize = NSFont.systemFontSize
         textView.font = NSFont(name: "JetBrains Mono", size: fontSize)
             ?? NSFont.monospacedSystemFont(ofSize: fontSize, weight: .regular)
