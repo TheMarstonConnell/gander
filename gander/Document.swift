@@ -31,6 +31,43 @@ class Document: NSDocument {
 
         let windowController = NSWindowController(window: window)
         addWindowController(windowController)
+
+        updateWindowTitle()
+    }
+
+    override func updateChangeCount(_ change: NSDocument.ChangeType) {
+        super.updateChangeCount(change)
+        updateWindowTitle()
+    }
+
+    override func save(_ sender: Any?) {
+        super.save(sender)
+        // Update title after save completes
+        DispatchQueue.main.async {
+            self.updateWindowTitle()
+        }
+    }
+
+    override func save(to url: URL, ofType typeName: String, for saveOperation: NSDocument.SaveOperationType, completionHandler: @escaping (Error?) -> Void) {
+        super.save(to: url, ofType: typeName, for: saveOperation) { error in
+            completionHandler(error)
+            if error == nil {
+                DispatchQueue.main.async {
+                    self.updateWindowTitle()
+                }
+            }
+        }
+    }
+
+    private func updateWindowTitle() {
+        guard let window = windowControllers.first?.window else { return }
+
+        let baseName = fileURL?.lastPathComponent ?? "Untitled"
+        if isDocumentEdited {
+            window.title = "\(baseName) *"
+        } else {
+            window.title = baseName
+        }
     }
 
     nonisolated override func data(ofType typeName: String) throws -> Data {
