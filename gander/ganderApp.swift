@@ -5,67 +5,101 @@
 //  Created by Marston on 2026-01-19.
 //
 
-import SwiftUI
-
-class AppDelegate: NSObject, NSApplicationDelegate {
-    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
-        // Delay check to allow new document windows to open
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-            if NSApp.windows.filter({ $0.isVisible }).isEmpty {
-                NSApp.terminate(nil)
-            }
-        }
-        return false
-    }
-}
-
-struct SaveCommand: Commands {
-    @FocusedValue(\.saveAction) var saveAction
-
-    var body: some Commands {
-        CommandGroup(replacing: .saveItem) {
-            Button("Save") {
-                saveAction?.action()
-            }
-            .keyboardShortcut("s", modifiers: .command)
-        }
-    }
-}
-
-struct ConfigCommands: Commands {
-    @Environment(\.openDocument) private var openDocument
-
-    var body: some Commands {
-        CommandGroup(after: .newItem) {
-            Divider()
-            Button("Open Config...") {
-                Task {
-                    let configURL = ThemeManager.shared.getConfigFileURL()
-                    try? await openDocument(at: configURL)
-                }
-            }
-            .keyboardShortcut(",", modifiers: .command)
-
-            Button("Reload Config") {
-                ThemeManager.shared.reloadTheme()
-            }
-            .keyboardShortcut("r", modifiers: [.command, .shift])
-        }
-    }
-}
+import AppKit
 
 @main
-struct ganderApp: App {
-    @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
-    private var themeManager = ThemeManager.shared
+class AppDelegate: NSObject, NSApplicationDelegate {
+    static func main() {
+        let app = NSApplication.shared
+        let delegate = AppDelegate()
+        app.delegate = delegate
+        app.run()
+    }
 
-    var body: some Scene {
-        DocumentGroup(newDocument: ganderDocument()) { file in
-            ContentView(document: file.$document, themeManager: themeManager)
-        }
-        .commands {
-            SaveCommand()
-            ConfigCommands()
-        }
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        setupMenus()
+    }
+
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
+        return true
+    }
+
+    func applicationShouldOpenUntitledFile(_ sender: NSApplication) -> Bool {
+        return true
+    }
+
+    func applicationOpenUntitledFile(_ sender: NSApplication) -> Bool {
+        NSDocumentController.shared.newDocument(nil)
+        return true
+    }
+
+    private func setupMenus() {
+        let mainMenu = NSMenu()
+
+        // App menu
+        let appMenuItem = NSMenuItem()
+        let appMenu = NSMenu()
+        appMenu.addItem(withTitle: "About Gander", action: #selector(NSApplication.orderFrontStandardAboutPanel(_:)), keyEquivalent: "")
+        appMenu.addItem(NSMenuItem.separator())
+        appMenu.addItem(withTitle: "Quit Gander", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        appMenuItem.submenu = appMenu
+        mainMenu.addItem(appMenuItem)
+
+        // File menu
+        let fileMenuItem = NSMenuItem()
+        let fileMenu = NSMenu(title: "File")
+        fileMenu.addItem(withTitle: "New", action: #selector(NSDocumentController.newDocument(_:)), keyEquivalent: "n")
+        fileMenu.addItem(withTitle: "Open...", action: #selector(NSDocumentController.openDocument(_:)), keyEquivalent: "o")
+        fileMenu.addItem(NSMenuItem.separator())
+        fileMenu.addItem(withTitle: "Save", action: #selector(NSDocument.save(_:)), keyEquivalent: "s")
+        fileMenu.addItem(withTitle: "Save As...", action: #selector(NSDocument.saveAs(_:)), keyEquivalent: "S")
+        fileMenu.addItem(withTitle: "Revert to Saved", action: #selector(NSDocument.revertToSaved(_:)), keyEquivalent: "")
+        fileMenu.addItem(NSMenuItem.separator())
+
+        let openConfigItem = NSMenuItem(title: "Open Config...", action: #selector(openConfig), keyEquivalent: ",")
+        openConfigItem.target = self
+        fileMenu.addItem(openConfigItem)
+
+        let reloadConfigItem = NSMenuItem(title: "Reload Config", action: #selector(reloadConfig), keyEquivalent: "r")
+        reloadConfigItem.keyEquivalentModifierMask = [.command, .shift]
+        reloadConfigItem.target = self
+        fileMenu.addItem(reloadConfigItem)
+
+        fileMenu.addItem(NSMenuItem.separator())
+        fileMenu.addItem(withTitle: "Close", action: #selector(NSWindow.performClose(_:)), keyEquivalent: "w")
+        fileMenuItem.submenu = fileMenu
+        mainMenu.addItem(fileMenuItem)
+
+        // Edit menu
+        let editMenuItem = NSMenuItem()
+        let editMenu = NSMenu(title: "Edit")
+        editMenu.addItem(withTitle: "Undo", action: #selector(UndoManager.undo), keyEquivalent: "z")
+        editMenu.addItem(withTitle: "Redo", action: #selector(UndoManager.redo), keyEquivalent: "Z")
+        editMenu.addItem(NSMenuItem.separator())
+        editMenu.addItem(withTitle: "Cut", action: #selector(NSText.cut(_:)), keyEquivalent: "x")
+        editMenu.addItem(withTitle: "Copy", action: #selector(NSText.copy(_:)), keyEquivalent: "c")
+        editMenu.addItem(withTitle: "Paste", action: #selector(NSText.paste(_:)), keyEquivalent: "v")
+        editMenu.addItem(withTitle: "Select All", action: #selector(NSText.selectAll(_:)), keyEquivalent: "a")
+        editMenuItem.submenu = editMenu
+        mainMenu.addItem(editMenuItem)
+
+        // Window menu
+        let windowMenuItem = NSMenuItem()
+        let windowMenu = NSMenu(title: "Window")
+        windowMenu.addItem(withTitle: "Minimize", action: #selector(NSWindow.performMiniaturize(_:)), keyEquivalent: "m")
+        windowMenu.addItem(withTitle: "Zoom", action: #selector(NSWindow.performZoom(_:)), keyEquivalent: "")
+        windowMenuItem.submenu = windowMenu
+        mainMenu.addItem(windowMenuItem)
+
+        NSApp.mainMenu = mainMenu
+        NSApp.windowsMenu = windowMenu
+    }
+
+    @objc func openConfig() {
+        ThemeManager.shared.openConfigInFinder()
+    }
+
+    @objc func reloadConfig() {
+        ThemeManager.shared.reloadTheme()
     }
 }

@@ -246,73 +246,12 @@ struct PaddedTextEditor: NSViewRepresentable {
     }
 }
 
-struct SaveAction {
-    let action: () -> Void
-}
-
-struct SaveActionKey: FocusedValueKey {
-    typealias Value = SaveAction
-}
-
-extension FocusedValues {
-    var saveAction: SaveAction? {
-        get { self[SaveActionKey.self] }
-        set { self[SaveActionKey.self] = newValue }
-    }
-}
-
-struct WindowAccessor: NSViewRepresentable {
-    let onWindow: (NSWindow) -> Void
-
-    func makeNSView(context: Context) -> NSView {
-        let view = NSView()
-        DispatchQueue.main.async {
-            if let window = view.window {
-                onWindow(window)
-            }
-        }
-        return view
-    }
-
-    func updateNSView(_ nsView: NSView, context: Context) {
-        DispatchQueue.main.async {
-            if let window = nsView.window {
-                onWindow(window)
-            }
-        }
-    }
-}
-
 struct ContentView: View {
     @Binding var document: ganderDocument
     var themeManager: ThemeManager
-    @State private var editingText: String = ""
-    @State private var hasUnsavedChanges: Bool = false
 
     var body: some View {
-        PaddedTextEditor(text: $editingText, theme: themeManager.currentTheme)
-            .background(WindowAccessor { window in
-                window.isDocumentEdited = hasUnsavedChanges
-                let baseTitle = window.title.replacingOccurrences(of: " *", with: "")
-                window.title = hasUnsavedChanges ? "\(baseTitle) *" : baseTitle
-            })
-            .onAppear {
-                editingText = document.text
-                hasUnsavedChanges = false
-            }
-            .onChange(of: editingText) { _, newValue in
-                hasUnsavedChanges = (newValue != document.text)
-            }
-            .onChange(of: document.text) { _, newValue in
-                if editingText != newValue {
-                    editingText = newValue
-                    hasUnsavedChanges = false
-                }
-            }
-            .focusedSceneValue(\.saveAction, SaveAction {
-                document.text = editingText
-                hasUnsavedChanges = false
-            })
+        PaddedTextEditor(text: $document.text, theme: themeManager.currentTheme)
     }
 }
 

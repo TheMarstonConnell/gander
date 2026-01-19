@@ -5,7 +5,7 @@
 //  Created by Marston on 2026-01-19.
 //
 
-import Foundation
+import AppKit
 
 @Observable
 final class ThemeManager {
@@ -55,6 +55,12 @@ final class ThemeManager {
     func getConfigFileURL() -> URL {
         ensureConfigFileExists()
         return configFileURL
+    }
+
+    /// Opens the config file in the default app
+    func openConfigInFinder() {
+        ensureConfigFileExists()
+        NSWorkspace.shared.open(configFileURL)
     }
 
     /// Lists all available theme names from the bundle
