@@ -11,6 +11,13 @@ class LineNumberGutter: NSView {
     weak var textView: NSTextView?
     private let gutterWidth: CGFloat = 40
 
+    var backgroundColor: NSColor = .textBackgroundColor {
+        didSet { needsDisplay = true }
+    }
+    var foregroundColor: NSColor = .secondaryLabelColor {
+        didSet { needsDisplay = true }
+    }
+
     override var isFlipped: Bool { true }
 
     init() {
@@ -30,11 +37,11 @@ class LineNumberGutter: NSView {
         guard let textView = textView,
               let layoutManager = textView.layoutManager else { return }
 
-        let textColor = NSColor.secondaryLabelColor
+        let textColor = foregroundColor
         let separatorColor = textColor.withAlphaComponent(0.3)
 
         // Fill background
-        NSColor.textBackgroundColor.setFill()
+        backgroundColor.setFill()
         dirtyRect.fill()
 
         // Draw separator line
@@ -100,6 +107,32 @@ class TextEditorContainer: NSView {
 
     override var isFlipped: Bool { true }
 
+    var backgroundColor: NSColor = .textBackgroundColor {
+        didSet {
+            textView.backgroundColor = backgroundColor
+            scrollView.backgroundColor = backgroundColor
+        }
+    }
+
+    var foregroundColor: NSColor = .textColor {
+        didSet {
+            textView.textColor = foregroundColor
+            textView.insertionPointColor = foregroundColor
+        }
+    }
+
+    var gutterBackgroundColor: NSColor = .textBackgroundColor {
+        didSet {
+            gutter.backgroundColor = gutterBackgroundColor
+        }
+    }
+
+    var gutterForegroundColor: NSColor = .secondaryLabelColor {
+        didSet {
+            gutter.foregroundColor = gutterForegroundColor
+        }
+    }
+
     init() {
         scrollView = NSTextView.scrollableTextView()
         textView = scrollView.documentView as! NSTextView
@@ -131,10 +164,18 @@ class TextEditorContainer: NSView {
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
+
+    func applyTheme(_ theme: Theme) {
+        backgroundColor = theme.background
+        foregroundColor = theme.foreground
+        gutterBackgroundColor = theme.gutter
+        gutterForegroundColor = theme.gutterForeground
+    }
 }
 
 struct PaddedTextEditor: NSViewRepresentable {
     @Binding var text: String
+    let theme: Theme
 
     func makeNSView(context: Context) -> TextEditorContainer {
         let container = TextEditorContainer()
@@ -146,8 +187,10 @@ struct PaddedTextEditor: NSViewRepresentable {
         textView.font = NSFont(name: "JetBrains Mono", size: fontSize)
             ?? NSFont.monospacedSystemFont(ofSize: fontSize, weight: .regular)
         textView.textContainerInset = NSSize(width: 16, height: 16)
-        textView.backgroundColor = .textBackgroundColor
         textView.delegate = context.coordinator
+
+        // Apply theme colors
+        container.applyTheme(theme)
 
         context.coordinator.gutter = container.gutter
 
@@ -175,6 +218,8 @@ struct PaddedTextEditor: NSViewRepresentable {
             nsView.textView.string = text
             context.coordinator.gutter?.needsDisplay = true
         }
+        // Update theme when it changes
+        nsView.applyTheme(theme)
     }
 
     func makeCoordinator() -> Coordinator {
@@ -240,11 +285,12 @@ struct WindowAccessor: NSViewRepresentable {
 
 struct ContentView: View {
     @Binding var document: ganderDocument
+    var themeManager: ThemeManager
     @State private var editingText: String = ""
     @State private var hasUnsavedChanges: Bool = false
 
     var body: some View {
-        PaddedTextEditor(text: $editingText)
+        PaddedTextEditor(text: $editingText, theme: themeManager.currentTheme)
             .background(WindowAccessor { window in
                 window.isDocumentEdited = hasUnsavedChanges
                 let baseTitle = window.title.replacingOccurrences(of: " *", with: "")
@@ -271,5 +317,5 @@ struct ContentView: View {
 }
 
 #Preview {
-    ContentView(document: .constant(ganderDocument()))
+    ContentView(document: .constant(ganderDocument()), themeManager: ThemeManager.shared)
 }

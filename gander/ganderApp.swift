@@ -32,16 +32,40 @@ struct SaveCommand: Commands {
     }
 }
 
+struct ConfigCommands: Commands {
+    @Environment(\.openDocument) private var openDocument
+
+    var body: some Commands {
+        CommandGroup(after: .newItem) {
+            Divider()
+            Button("Open Config...") {
+                Task {
+                    let configURL = ThemeManager.shared.getConfigFileURL()
+                    try? await openDocument(at: configURL)
+                }
+            }
+            .keyboardShortcut(",", modifiers: .command)
+
+            Button("Reload Config") {
+                ThemeManager.shared.reloadTheme()
+            }
+            .keyboardShortcut("r", modifiers: [.command, .shift])
+        }
+    }
+}
+
 @main
 struct ganderApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
+    private var themeManager = ThemeManager.shared
 
     var body: some Scene {
         DocumentGroup(newDocument: ganderDocument()) { file in
-            ContentView(document: file.$document)
+            ContentView(document: file.$document, themeManager: themeManager)
         }
         .commands {
             SaveCommand()
+            ConfigCommands()
         }
     }
 }
