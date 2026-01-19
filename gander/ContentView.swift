@@ -133,6 +133,19 @@ class TextEditorContainer: NSView {
         }
     }
 
+    var selectionColor: NSColor? = nil {
+        didSet {
+            if let color = selectionColor {
+                textView.selectedTextAttributes = [
+                    .backgroundColor: color
+                ]
+            } else {
+                // Reset to system default
+                textView.selectedTextAttributes = [:]
+            }
+        }
+    }
+
     init() {
         scrollView = NSTextView.scrollableTextView()
         textView = scrollView.documentView as! NSTextView
@@ -170,6 +183,7 @@ class TextEditorContainer: NSView {
         foregroundColor = theme.foreground
         gutterBackgroundColor = theme.gutter
         gutterForegroundColor = theme.gutterForeground
+        selectionColor = theme.selection
     }
 }
 

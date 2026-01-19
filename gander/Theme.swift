@@ -13,6 +13,7 @@ struct Theme {
     let foreground: NSColor
     let gutter: NSColor
     let gutterForeground: NSColor
+    let selection: NSColor?
 
     /// System default theme using macOS system colors
     static let system = Theme(
@@ -20,7 +21,8 @@ struct Theme {
         background: .textBackgroundColor,
         foreground: .textColor,
         gutter: .textBackgroundColor,
-        gutterForeground: .secondaryLabelColor
+        gutterForeground: .secondaryLabelColor,
+        selection: nil
     )
 }
 
@@ -49,12 +51,16 @@ enum ThemeParser {
         let gutterForeground = (globalSettings["gutterForeground"] as? String).flatMap { NSColor(hex: $0) }
             ?? foreground.withAlphaComponent(0.5)
 
+        // Selection color
+        let selection = (globalSettings["selection"] as? String).flatMap { NSColor(hex: $0) }
+
         return Theme(
             name: name,
             background: background,
             foreground: foreground,
             gutter: gutter,
-            gutterForeground: gutterForeground
+            gutterForeground: gutterForeground,
+            selection: selection
         )
     }
 }
