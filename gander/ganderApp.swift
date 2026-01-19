@@ -19,6 +19,19 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 }
 
+struct SaveCommand: Commands {
+    @FocusedValue(\.saveAction) var saveAction
+
+    var body: some Commands {
+        CommandGroup(replacing: .saveItem) {
+            Button("Save") {
+                saveAction?.action()
+            }
+            .keyboardShortcut("s", modifiers: .command)
+        }
+    }
+}
+
 @main
 struct ganderApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
@@ -26,6 +39,9 @@ struct ganderApp: App {
     var body: some Scene {
         DocumentGroup(newDocument: ganderDocument()) { file in
             ContentView(document: file.$document)
+        }
+        .commands {
+            SaveCommand()
         }
     }
 }
