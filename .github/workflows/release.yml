@@ -16,14 +16,15 @@ jobs:
           xcodebuild -scheme gander -configuration Release \
             -archivePath build/gander.xcarchive \
             -destination 'generic/platform=macOS' \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
             archive
 
       - name: Export app
         run: |
-          xcodebuild -exportArchive \
-            -archivePath build/gander.xcarchive \
-            -exportPath build/ \
-            -exportOptionsPlist ExportOptions.plist
+          mkdir -p build
+          cp -R build/gander.xcarchive/Products/Applications/gander.app build/
 
       - name: Ad-hoc sign
         run: codesign --force --deep -s - build/gander.app
