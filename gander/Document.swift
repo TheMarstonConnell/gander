@@ -78,6 +78,15 @@ class Document: NSDocument {
         return data
     }
 
+    nonisolated override func read(from url: URL, ofType typeName: String) throws {
+        // Strip quarantine xattr from downloaded files to prevent
+        // Gatekeeper "could not verify" warnings
+        _ = url.path.withCString { path in
+            removexattr(path, "com.apple.quarantine", 0)
+        }
+        try super.read(from: url, ofType: typeName)
+    }
+
     nonisolated override func read(from data: Data, ofType typeName: String) throws {
         guard let string = String(data: data, encoding: .utf8) else {
             throw CocoaError(.fileReadCorruptFile)
